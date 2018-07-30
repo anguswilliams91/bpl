@@ -89,11 +89,6 @@ class TestBPLModel(TestCase):
             summary, pd.DataFrame
         )
 
-    def test_fit_notconverged(self):
-        """Test that the correct warning is raised when the fit hasn't converged."""
-        model = BPLModel(TEST_DATA)
-        self.assertWarns(ModelNotConvergedWarning, model.fit, iter=100, seed=42)
-
     def test_modelnotfit(self):
         """Test that the ModelNotFit error is thrown where is should be."""
         model = BPLModel(TEST_DATA)
