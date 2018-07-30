@@ -62,6 +62,11 @@ class BPLModel:
 
     def fit(self, max_date=None, return_summary=False, **stan_kwargs):
         """
+        Fit the model.
+
+        Run Stan's NUTS sampler to draw samples from the posterior distribution of the model parameters given the 
+        data provided.
+
         :param max_date: fit the model to games that took place on or before this date.
         :param return_summary: if True, return a pandas dataframe with summary statistics from the MCMC sampling.
         :param stan_kwargs: extra keyword arguments that are passed to the StanModel (e.g., niter).

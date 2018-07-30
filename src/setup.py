@@ -5,20 +5,11 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 from setuptools.command.develop import develop
 
+with open('requirements.txt', 'r') as f:
+    REQUIRED_PACKAGES = f.read().splitlines()
 SETUP_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(SETUP_DIR, 'stan')
 MODEL_TARGET_DIR = os.path.join('bpl', 'stan_model')
-
-
-def compile_stan_models(target_dir, model_dir=MODEL_DIR):
-    """Pre-compile the stan models that are used by the module."""
-    from pystan import StanModel
-    names = ['simple_model.stan', 'model_with_prior.stan']
-    targets = ['simple_model.pkl', 'prior_model.pkl']
-    for (name, target) in zip(names, targets):
-        sm = StanModel(file=os.path.join(model_dir, name))
-        with open(os.path.join(target_dir, target), 'wb') as f:
-            pickle.dump(sm, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 class BPyCmd(build_py):
@@ -43,8 +34,16 @@ class DevCmd(develop):
         develop.run(self)
 
 
-with open('requirements.txt', 'r') as f:
-    required_packages = f.read().splitlines()
+def compile_stan_models(target_dir, model_dir=MODEL_DIR):
+    """Pre-compile the stan models that are used by the module."""
+    from pystan import StanModel
+    names = ['simple_model.stan', 'model_with_prior.stan']
+    targets = ['simple_model.pkl', 'prior_model.pkl']
+    for (name, target) in zip(names, targets):
+        sm = StanModel(file=os.path.join(model_dir, name))
+        with open(os.path.join(target_dir, target), 'wb') as f:
+            pickle.dump(sm, f, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 setup(
     name='bpl',
@@ -56,7 +55,7 @@ setup(
     license='MIT',
     packages=['bpl', 'bpl.test'],
     setup_requires=[],
-    install_requires=required_packages,
+    install_requires=REQUIRED_PACKAGES,
     zip_safe=False,
     include_package_data=True,
     cmdclass={
