@@ -69,8 +69,7 @@ class BPLModel:
             sampling is also returned.
         """
         stan_data = self._pre_process_data(max_date)
-        with suppress_stdout_stderr():
-            fit = self.model.sampling(data=stan_data, **stan_kwargs)
+        fit = self.model.sampling(data=stan_data, **stan_kwargs)
         self.a = fit["a"]
         self.b = fit["b"]
         self.gamma = fit["gamma"]
