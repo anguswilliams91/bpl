@@ -178,29 +178,29 @@ class BPLModel:
         goal_probs = poisson.pmf(n, score_rate)
         return np.mean(goal_probs)
 
-        def score_n_probability(self, n, team, opponent, home=True):
-            """
-            Compute the probability that a team will score n goals.
+    def score_n_probability(self, n, team, opponent, home=True):
+        """
+        Compute the probability that a team will score n goals.
 
-            Given a team and an opponent, calculate the probability that the team will
-            score n goals against this opponent.
+        Given a team and an opponent, calculate the probability that the team will
+        score n goals against this opponent.
 
-            :param n: the number of goals.
-            :param team: the name of the team.
-            :param opponent: the name of the opponent.
-            :param home: (optional) if True, then it is assumed that the team are
-                playing at home.
-            """
-            if not self._is_fit:
-                raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
-            team_ind = self.team_indices[team] - 1
-            oppo_ind = self.team_indices[opponent] - 1
-            a_team, b_oppo = self.a[:, team_ind], self.b[:, oppo_ind]
-            score_rate = a_team * b_oppo
-            if home:
-                score_rate *= self.gamma
-            goal_probs = poisson.pmf(n, score_rate)
-            return np.mean(goal_probs)
+        :param n: the number of goals.
+        :param team: the name of the team.
+        :param opponent: the name of the opponent.
+        :param home: (optional) if True, then it is assumed that the team are
+            playing at home.
+        """
+        if not self._is_fit:
+            raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
+        team_ind = self.team_indices[team] - 1
+        oppo_ind = self.team_indices[opponent] - 1
+        a_team, b_oppo = self.a[:, team_ind], self.b[:, oppo_ind]
+        score_rate = a_team * b_oppo
+        if home:
+            score_rate *= self.gamma
+        goal_probs = poisson.pmf(n, score_rate)
+        return np.mean(goal_probs)
 
     def overall_probabilities(self, home_team, away_team):
         """

@@ -148,9 +148,6 @@ class TestBPLModel(TestCase):
         self.assertTrue(
             (0.0 <= pr_home <= 1.0) and (0.0 <= pr_away <= 1.0)
         )
-        self.assertTrue(
-            pr_home > pr_away
-        )
 
     def test_concede_n_probabilities(self):
         """Test method that computes the probability of scoring n goals."""
@@ -163,11 +160,6 @@ class TestBPLModel(TestCase):
         self.assertTrue(
             (0.0 <= pr_home <= 1.0) and (0.0 <= pr_away <= 1.0)
         )
-        self.assertTrue(
-            pr_home < pr_away
-        )
-
-
 
 
 
