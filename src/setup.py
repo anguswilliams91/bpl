@@ -66,6 +66,6 @@ setup(
     tests_require=['nose'],
     long_description="""
     A package for fitting Bayesian models to football leagues. Models are reminiscent of Dixon \& Coles
-    (1997) , but have been cast into a hierarchical Bayesian form, with the option of team-level covariates in the 
+    (1997) , but have been cast into a hierarchical Bayesian form, with the option of team-level covariates in the
     prior."""
 )

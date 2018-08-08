@@ -101,6 +101,12 @@ class TestBPLModel(TestCase):
         self.assertRaises(ModelNotFitError,
                           model.overall_probabilities,
                           "Arsenal", "Man City")
+        self.assertRaises(ModelNotFitError,
+                          model.score_n_probability,
+                          1, "Arsenal", "Man City")
+        self.assertRaises(ModelNotFitError,
+                          model.concede_n_probability,
+                          1, "Arsenal", "Man City")
 
     def test_simulate_match(self):
         df = FITTED_MODEL.simulate_match("Arsenal", "Man City")
@@ -131,7 +137,35 @@ class TestBPLModel(TestCase):
             sum(pr), 1.0, places=5
         )
 
+    def test_score_n_probabilities(self):
+        """Test method that computes the probability of scoring n goals."""
+        pr_home = FITTED_MODEL.score_n_probability(
+            1, "Arsenal", "Man City", home=True
+        )
+        pr_away = FITTED_MODEL.score_n_probability(
+            1, "Arsenal", "Man City", home=False
+        )
+        self.assertTrue(
+            (0.0 <= pr_home <= 1.0) and (0.0 <= pr_away <= 1.0)
+        )
+        self.assertTrue(
+            pr_home > pr_away
+        )
 
+    def test_concede_n_probabilities(self):
+        """Test method that computes the probability of scoring n goals."""
+        pr_home = FITTED_MODEL.concede_n_probability(
+            1, "Arsenal", "Man City", home=True
+        )
+        pr_away = FITTED_MODEL.concede_n_probability(
+            1, "Arsenal", "Man City", home=False
+        )
+        self.assertTrue(
+            (0.0 <= pr_home <= 1.0) and (0.0 <= pr_away <= 1.0)
+        )
+        self.assertTrue(
+            pr_home < pr_away
+        )
 
 
 
