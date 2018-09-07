@@ -24,7 +24,9 @@ class BPLModel:
         self.X = X
         self.pandas_data = data
         self.stan_data = None
-        self.team_indices = {team: i + 1 for i, team in enumerate(np.sort(data["home_team"].unique()))}
+        self.team_indices = {
+            team: i + 1 for i, team in enumerate(np.sort(data["home_team"].unique()))
+        }
         self._is_fit = False
         self.a = None
         self.b = None
@@ -49,13 +51,21 @@ class BPLModel:
             home_team=df["home_team"].values,
             away_team=df["away_team"].values,
             home_goals=df["home_goals"].values,
-            away_goals=df["away_goals"].values
+            away_goals=df["away_goals"].values,
         )
         if self.X is not None:
-            stan_X = self.X.replace(
-                to_replace={"team": self.team_indices}
-            ).sort_values("team").drop("team", axis=1).astype(float).values
-            stan_X = 0.5 * (stan_X - stan_X[:, None, :].mean(axis=0)) / stan_X[:, None, :].std(axis=0)
+            stan_X = (
+                self.X.replace(to_replace={"team": self.team_indices})
+                .sort_values("team")
+                .drop("team", axis=1)
+                .astype(float)
+                .values
+            )
+            stan_X = (
+                0.5
+                * (stan_X - stan_X[:, None, :].mean(axis=0))
+                / stan_X[:, None, :].std(axis=0)
+            )
             stan_data["X"] = stan_X
             stan_data["nfeat"] = stan_X.shape[1]
         return stan_data
@@ -85,11 +95,15 @@ class BPLModel:
         self._is_fit = True
 
         s = fit.summary()
-        summary = pd.DataFrame(s['summary'], columns=s['summary_colnames'], index=s['summary_rownames'])
+        summary = pd.DataFrame(
+            s["summary"], columns=s["summary_colnames"], index=s["summary_rownames"]
+        )
         if (summary["Rhat"] > 1.1).any():
-            warnings.warn("Sampling may not have converged - some scale reduction factors are > 1.1."\
-                          " Try running again with more iterations.",
-                          ModelNotConvergedWarning)
+            warnings.warn(
+                "Sampling may not have converged - some scale reduction factors are > 1.1."
+                " Try running again with more iterations.",
+                ModelNotConvergedWarning,
+            )
         if return_summary:
             return summary
         else:
@@ -108,7 +122,9 @@ class BPLModel:
             the simulations.
         """
         if not self._is_fit:
-            raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
+            raise ModelNotFitError(
+                "Model must be fit to data before forecasts can be made."
+            )
         home_ind = self.team_indices[home_team] - 1
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
@@ -117,19 +133,10 @@ class BPLModel:
         away_rate = a_away * b_home
         home_goals = np.random.poisson(home_rate)
         away_goals = np.random.poisson(away_rate)
-        df = pd.DataFrame(
-            {
-                home_team: home_goals,
-                away_team: away_goals
-            }
-        )
+        df = pd.DataFrame({home_team: home_goals, away_team: away_goals})
         return df
 
-    def score_probability(self,
-                          home_team,
-                          away_team,
-                          home_goals,
-                          away_goals):
+    def score_probability(self, home_team, away_team, home_goals, away_goals):
         """
         Compute the probability of a result.
 
@@ -143,7 +150,9 @@ class BPLModel:
         :return: the probability of this result.
         """
         if not self._is_fit:
-            raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
+            raise ModelNotFitError(
+                "Model must be fit to data before forecasts can be made."
+            )
         home_ind = self.team_indices[home_team] - 1
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
@@ -168,7 +177,9 @@ class BPLModel:
             playing at home.
         """
         if not self._is_fit:
-            raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
+            raise ModelNotFitError(
+                "Model must be fit to data before forecasts can be made."
+            )
         team_ind = self.team_indices[team] - 1
         oppo_ind = self.team_indices[opponent] - 1
         b_team, a_oppo = self.b[:, team_ind], self.a[:, oppo_ind]
@@ -192,7 +203,9 @@ class BPLModel:
             playing at home.
         """
         if not self._is_fit:
-            raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
+            raise ModelNotFitError(
+                "Model must be fit to data before forecasts can be made."
+            )
         team_ind = self.team_indices[team] - 1
         oppo_ind = self.team_indices[opponent] - 1
         a_team, b_oppo = self.a[:, team_ind], self.b[:, oppo_ind]
@@ -214,20 +227,20 @@ class BPLModel:
         :return: home_win, away_win, draw - a tuple of floats corresponding to the three result probabilities.
         """
         if not self._is_fit:
-            raise ModelNotFitError("Model must be fit to data before forecasts can be made.")
+            raise ModelNotFitError(
+                "Model must be fit to data before forecasts can be made."
+            )
         max_goals = 15
         n_goals = np.arange(0, max_goals + 1)
-        x, y = np.meshgrid(n_goals, n_goals, indexing='ij')
-        prob = np.array([
-            self.score_probability(home_team, away_team, xi, yj)
-            for xi in n_goals
-            for yj in n_goals
-        ]).reshape(max_goals + 1, max_goals + 1)
+        x, y = np.meshgrid(n_goals, n_goals, indexing="ij")
+        prob = np.array(
+            [
+                self.score_probability(home_team, away_team, xi, yj)
+                for xi in n_goals
+                for yj in n_goals
+            ]
+        ).reshape(max_goals + 1, max_goals + 1)
         home_win = np.sum(prob[x > y])
         away_win = np.sum(prob[x < y])
         draw = np.sum(prob[x == y])
         return home_win, away_win, draw
-
-
-
-
