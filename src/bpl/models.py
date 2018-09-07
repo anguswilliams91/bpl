@@ -6,11 +6,7 @@ import warnings
 from scipy.stats import poisson
 
 from bpl.stan_models import simple_stan_model, prior_stan_model
-from bpl.util import (
-    ModelNotFitError,
-    ModelNotConvergedWarning,
-    suppress_output
-)
+from bpl.util import ModelNotFitError, ModelNotConvergedWarning, suppress_output
 
 
 class BPLModel:

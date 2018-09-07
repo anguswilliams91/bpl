@@ -15,10 +15,7 @@ class suppress_output:
     """ Suppress stdout and stderr from stan. """
 
     def __init__(self):
-        self.null_fds = [
-            mkstemp(),
-            mkstemp()
-        ]
+        self.null_fds = [mkstemp(), mkstemp()]
         self.save_fds = [os.dup(1), os.dup(2)]
 
     def __enter__(self):
