@@ -6,7 +6,11 @@ import warnings
 from scipy.stats import poisson
 
 from bpl.stan_models import simple_stan_model, prior_stan_model
-from bpl.util import ModelNotFitError, ModelNotConvergedWarning
+from bpl.util import (
+    ModelNotFitError,
+    ModelNotConvergedWarning,
+    suppress_output
+)
 
 
 class BPLModel:
@@ -74,7 +78,8 @@ class BPLModel:
             sampling is also returned.
         """
         stan_data = self._pre_process_data(max_date)
-        fit = self.model.sampling(data=stan_data, **stan_kwargs)
+        with suppress_output():
+            fit = self.model.sampling(data=stan_data, **stan_kwargs)
         self.a = fit["a"]
         self.b = fit["b"]
         self.gamma = fit["gamma"]
