@@ -11,6 +11,21 @@ class ModelNotConvergedWarning(Warning):
     pass
 
 
+def check_fit(foo):
+    """Decorator: check if a model is fit before running function body.
+
+    If a model is not fit, then throw a ModelNotFitError instead of running body.
+    """
+    def foo_check(self, *args, **kwargs):
+        if not self._is_fit:
+            raise ModelNotFitError(
+                "Model must be fit to data before forecasts can be made."
+            )
+        else:
+            return foo(self, *args, **kwargs)
+    return foo_check
+
+
 class suppress_output:
     """ Suppress stdout and stderr from stan. """
 

@@ -6,7 +6,10 @@ import warnings
 from scipy.stats import poisson
 
 from bpl.stan_models import simple_stan_model, prior_stan_model
-from bpl.util import ModelNotFitError, ModelNotConvergedWarning, suppress_output
+from bpl.util import (ModelNotFitError,
+                      ModelNotConvergedWarning,
+                      suppress_output,
+                      check_fit)
 
 
 class BPLModel:
@@ -110,6 +113,7 @@ class BPLModel:
         else:
             return
 
+    @check_fit
     def simulate_match(self, home_team, away_team):
         """
         Simulate a match.
@@ -122,10 +126,6 @@ class BPLModel:
         :return: a pandas dataframe containing columns home_team and away_team, which are the results of
             the simulations.
         """
-        if not self._is_fit:
-            raise ModelNotFitError(
-                "Model must be fit to data before forecasts can be made."
-            )
         home_ind = self.team_indices[home_team] - 1
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
@@ -137,6 +137,7 @@ class BPLModel:
         df = pd.DataFrame({home_team: home_goals, away_team: away_goals})
         return df
 
+    @check_fit
     def score_probability(self, home_team, away_team, home_goals, away_goals):
         """
         Compute the probability of a result.
@@ -150,10 +151,6 @@ class BPLModel:
         :param away_goals: number of away goals.
         :return: the probability of this result.
         """
-        if not self._is_fit:
-            raise ModelNotFitError(
-                "Model must be fit to data before forecasts can be made."
-            )
         home_ind = self.team_indices[home_team] - 1
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
@@ -164,6 +161,7 @@ class BPLModel:
         away_probs = poisson.pmf(away_goals, away_rate)
         return np.mean(home_probs * away_probs)
 
+    @check_fit
     def concede_n_probability(self, n, team, opponent, home=True):
         """
         Compute the probability that a team will concede n goals.
@@ -177,10 +175,6 @@ class BPLModel:
         :param home: (optional) if True, then it is assumed that the team are
             playing at home.
         """
-        if not self._is_fit:
-            raise ModelNotFitError(
-                "Model must be fit to data before forecasts can be made."
-            )
         team_ind = self.team_indices[team] - 1
         oppo_ind = self.team_indices[opponent] - 1
         b_team, a_oppo = self.b[:, team_ind], self.a[:, oppo_ind]
@@ -190,6 +184,7 @@ class BPLModel:
         goal_probs = poisson.pmf(n, score_rate)
         return np.mean(goal_probs)
 
+    @check_fit
     def score_n_probability(self, n, team, opponent, home=True):
         """
         Compute the probability that a team will score n goals.
@@ -203,10 +198,6 @@ class BPLModel:
         :param home: (optional) if True, then it is assumed that the team are
             playing at home.
         """
-        if not self._is_fit:
-            raise ModelNotFitError(
-                "Model must be fit to data before forecasts can be made."
-            )
         team_ind = self.team_indices[team] - 1
         oppo_ind = self.team_indices[opponent] - 1
         a_team, b_oppo = self.a[:, team_ind], self.b[:, oppo_ind]
@@ -216,6 +207,7 @@ class BPLModel:
         goal_probs = poisson.pmf(n, score_rate)
         return np.mean(goal_probs)
 
+    @check_fit
     def overall_probabilities(self, home_team, away_team):
         """
         Compute the probability of home win, away win and draw.
@@ -227,10 +219,6 @@ class BPLModel:
         :param away_team: name of the away team (must match a team name in self.data)
         :return: home_win, away_win, draw - a tuple of floats corresponding to the three result probabilities.
         """
-        if not self._is_fit:
-            raise ModelNotFitError(
-                "Model must be fit to data before forecasts can be made."
-            )
         max_goals = 15
         n_goals = np.arange(0, max_goals + 1)
         x, y = np.meshgrid(n_goals, n_goals, indexing="ij")
@@ -245,3 +233,24 @@ class BPLModel:
         away_win = np.sum(prob[x < y])
         draw = np.sum(prob[x == y])
         return home_win, away_win, draw
+
+    @check_fit
+    def predict_future_matches(self, future_matches):
+        """
+        Produce a pandas dataframe with predicted probabilities for a set of upcoming matches.
+
+        :param future_matches: a pandas dataframe with columns "home_team", "away_team".
+            Other columns may also be present, and these will be preserved in the output.
+        :return: a pandas dataframe with columns "home_team", "away_team", "pr_home", "pr_away" and "pr_draw",
+            plus any extra columns in `future_matches`.
+        """
+        df = future_matches.copy()
+        probs = [
+            self.overall_probabilities(home_team, away_team)
+            for (home_team, away_team)
+            in zip(df["home_team"], df["away_team"])
+        ]
+        df["pr_home"] = [p[0] for p in probs]
+        df["pr_away"] = [p[1] for p in probs]
+        df["pr_draw"] = [p[2] for p in probs]
+        return df
