@@ -5,9 +5,9 @@ import warnings
 
 from scipy.stats import poisson
 
+from bpl.plotting import plot_score_grid, has_matplotlib
 from bpl.stan_models import simple_stan_model, prior_stan_model
-from bpl.util import (ModelNotFitError,
-                      ModelNotConvergedWarning,
+from bpl.util import (ModelNotConvergedWarning,
                       suppress_output,
                       check_fit)
 
@@ -208,6 +208,19 @@ class BPLModel:
         return np.mean(goal_probs)
 
     @check_fit
+    def _make_score_grid(self, home_team, away_team, max_goals=15):
+        # produce an "ij" indexed grid containing probabilities for various scorelines
+        n_goals = np.arange(0, max_goals + 1)
+        x, y = np.meshgrid(n_goals, n_goals, indexing="ij")
+        prob = np.array(
+            [
+                self.score_probability(home_team, away_team, xi, yj)
+                for xi in n_goals
+                for yj in n_goals
+            ]
+        ).reshape(max_goals + 1, max_goals + 1)
+        return prob, x, y
+
     def overall_probabilities(self, home_team, away_team):
         """
         Compute the probability of home win, away win and draw.
@@ -219,30 +232,20 @@ class BPLModel:
         :param away_team: name of the away team (must match a team name in self.data)
         :return: home_win, away_win, draw - a tuple of floats corresponding to the three result probabilities.
         """
-        max_goals = 15
-        n_goals = np.arange(0, max_goals + 1)
-        x, y = np.meshgrid(n_goals, n_goals, indexing="ij")
-        prob = np.array(
-            [
-                self.score_probability(home_team, away_team, xi, yj)
-                for xi in n_goals
-                for yj in n_goals
-            ]
-        ).reshape(max_goals + 1, max_goals + 1)
+        prob, x, y = self._make_score_grid(home_team, away_team)
         home_win = np.sum(prob[x > y])
         away_win = np.sum(prob[x < y])
         draw = np.sum(prob[x == y])
         return home_win, away_win, draw
 
-    @check_fit
     def predict_future_matches(self, future_matches):
         """
         Produce a pandas dataframe with predicted probabilities for a set of upcoming matches.
 
-        :param future_matches: a pandas dataframe with columns "home_team", "away_team".
-            Other columns may also be present, and these will be preserved in the output.
+        :param future_matches: a pandas dataframe with columns "home_team", "away_team"
+            Other columns may also be present, and these will be preserved in the output
         :return: a pandas dataframe with columns "home_team", "away_team", "pr_home", "pr_away" and "pr_draw",
-            plus any extra columns in `future_matches`.
+            plus any extra columns in `future_matches`
         """
         df = future_matches.copy()
         probs = [
@@ -254,3 +257,18 @@ class BPLModel:
         df["pr_away"] = [p[1] for p in probs]
         df["pr_draw"] = [p[2] for p in probs]
         return df
+
+    def plot_score_probabilies(self, home_team, away_team):
+        """
+        Visualise the probability of different scorelines.
+
+        Produce a heatmap of various scorelines between the given home and away teams.
+        A cross is drawn at the most likely scoreline.
+
+        :param home_team: the home team
+        :param away_team: the away team
+        :return: matplotlib.figure.Figure object.
+        """
+        prob, _, __ = self._make_score_grid(home_team, away_team, max_goals=7)
+        return plot_score_grid(prob, home_team, away_team)
+
