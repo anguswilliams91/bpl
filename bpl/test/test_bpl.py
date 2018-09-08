@@ -5,7 +5,8 @@ import os
 
 from unittest import TestCase
 
-from bpl.models import BPLModel, ModelNotConvergedWarning, ModelNotFitError
+from bpl.models import BPLModel
+from bpl.util import ModelNotConvergedWarning, ModelNotFitError, check_fit
 
 TEST_DATA = pd.read_csv(os.path.join(os.path.dirname(__file__), "test_data.csv"))
 TEST_FEATS = pd.read_csv(os.path.join(os.path.dirname(__file__), "test_feats.csv"))
@@ -92,20 +93,21 @@ class TestBPLModel(TestCase):
 
     def test_modelnotfit(self):
         """Test that the ModelNotFit error is thrown where is should be."""
-        model = BPLModel(TEST_DATA)
-        self.assertRaises(
-            ModelNotFitError, model.score_probability, "Arsenal", "Man City", 1, 0
-        )
-        self.assertRaises(ModelNotFitError, model.simulate_match, "Arsenal", "Man City")
-        self.assertRaises(
-            ModelNotFitError, model.overall_probabilities, "Arsenal", "Man City"
-        )
-        self.assertRaises(
-            ModelNotFitError, model.score_n_probability, 1, "Arsenal", "Man City"
-        )
-        self.assertRaises(
-            ModelNotFitError, model.concede_n_probability, 1, "Arsenal", "Man City"
-        )
+        class DummyModel:
+
+            def __init__(self, is_fit):
+                self._is_fit = is_fit
+
+            @check_fit
+            def foo(self):
+                return True
+
+        dummy_not_fit = DummyModel(False)
+        dummy_fit = DummyModel(True)
+        # check error thrown when _is_fit is False
+        self.assertRaises(ModelNotFitError, dummy_not_fit.foo)
+        # check error not thrown when _is_fit is True
+        self.assertTrue(dummy_fit.foo())
 
     def test_simulate_match(self):
         df = FITTED_MODEL.simulate_match("Arsenal", "Man City")
@@ -139,3 +141,27 @@ class TestBPLModel(TestCase):
             1, "Arsenal", "Man City", home=False
         )
         self.assertTrue((0.0 <= pr_home <= 1.0) and (0.0 <= pr_away <= 1.0))
+
+    def test_predict_future_matches(self):
+        """Test predict future matches"""
+        df = pd.DataFrame({
+            "home_team": ["Arsenal", "Man City", "Tottenham"],
+            "away_team": ["Man City", "Tottenham", "Arsenal"]
+        })
+        df_pred = FITTED_MODEL.predict_future_matches(df)
+        # check returned dataframe has correct columns
+        self.assertSetEqual(
+            set(df_pred.columns),
+            {"home_team",
+             "away_team",
+             "pr_home",
+             "pr_away",
+             "pr_draw"}
+        )
+        # check probabilities sum to 1 across the columns
+        self.assertTrue(
+            np.allclose(
+                df_pred["pr_home"] + df_pred["pr_away"] + df_pred["pr_draw"],
+                [1.0, ] * len(df)
+            )
+        )
