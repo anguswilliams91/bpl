@@ -1,3 +1,4 @@
+import functools
 import os
 
 from tempfile import mkstemp
@@ -16,6 +17,7 @@ def check_fit(foo):
 
     If a model is not fit, then throw a ModelNotFitError instead of running body.
     """
+    @functools.wraps(foo)
     def foo_check(self, *args, **kwargs):
         if not self._is_fit:
             raise ModelNotFitError(
