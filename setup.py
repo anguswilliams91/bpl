@@ -51,7 +51,7 @@ setup(
     url="https://github.com/anguswilliams91/FPL",
     author="Angus Williams <anguswilliams91@gmail.com>",
     author_email="anguswilliams91@gmail.com",
-    license="MIT",
+    license="GPL-3.0",
     packages=["bpl", "bpl.test"],
     setup_requires=[],
     install_requires=REQUIRED_PACKAGES,
