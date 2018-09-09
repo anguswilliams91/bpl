@@ -27,10 +27,6 @@ def check_fit(foo):
             return foo(self, *args, **kwargs)
     return foo_check
 
-def check_matplotlib(foo):
-    """"""
-
-
 class suppress_output:
     """ Suppress stdout and stderr from stan. """
 
