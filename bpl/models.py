@@ -272,3 +272,35 @@ class BPLModel:
         prob, _, __ = self._make_score_grid(home_team, away_team, max_goals=7)
         return plot_score_grid(prob, home_team, away_team)
 
+    def _log_score(self, df):
+        # calculate the log score of the model on some matches
+        df["pr_result"] = df.apply(
+            lambda row: self.score_probability(
+                row["home_team"], row["away_team"], row["home_goals"], row["away_goals"]
+            ),
+            axis=1
+        )
+        return np.log(df["pr_result"]).sum() / len(df)
+
+    @check_fit
+    def log_score(self, df=None, date_range=None):
+        """
+        Evaluate the log score of the model on a dataset.
+
+        For each match, the log probability of the scoreline is computed using the predictive distribution of the
+        model. The average log score is then calculated.
+
+
+        :param df: (optional) a pandas dataframe containing columns "date", "home_team", "away_team",
+            "home_goals" and "away_goals". If none is provided, the training data are used.
+        :param date_range: a tuple of two datetimes. The first is the earliest date to consider, the second is
+            the latest date to consider. This range is then applied to `df`.
+        :return: the log score.
+        """
+        if df is None:
+            df = self.pandas_data.copy()
+        if date_range is not None:
+            df["date"] = pd.to_datetime(df["date"])
+            df = df[(df["date"] >= date_range[0]) & (df["date"] <= date_range[1])]
+        return self._log_score(df)
+

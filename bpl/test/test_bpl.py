@@ -165,3 +165,25 @@ class TestBPLModel(TestCase):
                 [1.0, ] * len(df)
             )
         )
+
+    def test_log_score(self):
+        """Test log score calculation"""
+        self.assertTrue(
+            FITTED_MODEL.log_score() < 0.0
+        )
+        self.assertTrue(
+            FITTED_MODEL.log_score(date_range=("2018-01-01", "2018-03-01"))
+        )
+        df_mock = pd.DataFrame(
+            {
+                "date": ["2018-01-02"],
+                "home_team": ["Man City"],
+                "away_team": ["Arsenal"],
+                "home_goals": [4.0],
+                "away_goals": [1.0]
+            }
+        )
+        self.assertTrue(
+            FITTED_MODEL.log_score(df_mock)
+        )
+
