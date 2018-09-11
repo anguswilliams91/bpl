@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import tqdm
 
 import warnings
 
@@ -7,9 +8,7 @@ from scipy.stats import poisson
 
 from bpl.plotting import plot_score_grid, has_matplotlib
 from bpl.stan_models import simple_stan_model, prior_stan_model
-from bpl.util import (ModelNotConvergedWarning,
-                      suppress_output,
-                      check_fit)
+from bpl.util import ModelNotConvergedWarning, suppress_output, check_fit
 
 
 class BPLModel:
@@ -18,7 +17,7 @@ class BPLModel:
     def __init__(self, data, X=None):
         """
         :param df: a pandas dataframe containing the data. Must have columns "home_team", "away_team", "home_goals",
-            "away_goals" and "date".
+            "away_goals" and "date". Date should be a pandas Timestamp.
         :param X: a pandas dataframe containing extra covariates to use in the prior for the team aptitudes.
             There should be a column "team", where each team in the league should only appear once. The remaining
             columns correspond to the features (which currently must be numerical).
@@ -43,13 +42,12 @@ class BPLModel:
         df = self.pandas_data.replace(
             to_replace={"home_team": self.team_indices, "away_team": self.team_indices}
         )
-        df.loc[:, "date"] = pd.to_datetime(df["date"])
         if max_date:
             df = df[df["date"] <= max_date]
             if len(df) == 0:
                 raise ValueError("No games before this date.")
         stan_data = dict(
-            nteam=df["home_team"].nunique(),
+            nteam=len(set(df["home_team"]).union(set(df["away_team"]))),
             nmatch=len(df),
             home_team=df["home_team"].values,
             away_team=df["away_team"].values,
@@ -250,8 +248,7 @@ class BPLModel:
         df = future_matches.copy()
         probs = [
             self.overall_probabilities(home_team, away_team)
-            for (home_team, away_team)
-            in zip(df["home_team"], df["away_team"])
+            for (home_team, away_team) in zip(df["home_team"], df["away_team"])
         ]
         df["pr_home"] = [p[0] for p in probs]
         df["pr_away"] = [p[1] for p in probs]
@@ -272,15 +269,16 @@ class BPLModel:
         prob, _, __ = self._make_score_grid(home_team, away_team, max_goals=7)
         return plot_score_grid(prob, home_team, away_team)
 
+    @check_fit
     def _log_score(self, df):
         # calculate the log score of the model on some matches
-        df["pr_result"] = df.apply(
+        pr_result = df.apply(
             lambda row: self.score_probability(
                 row["home_team"], row["away_team"], row["home_goals"], row["away_goals"]
             ),
-            axis=1
+            axis=1,
         )
-        return np.log(df["pr_result"]).sum() / len(df)
+        return np.log(pr_result).sum() / len(pr_result)
 
     @check_fit
     def log_score(self, df=None, date_range=None):
@@ -300,7 +298,42 @@ class BPLModel:
         if df is None:
             df = self.pandas_data.copy()
         if date_range is not None:
-            df["date"] = pd.to_datetime(df["date"])
             df = df[(df["date"] >= date_range[0]) & (df["date"] <= date_range[1])]
         return self._log_score(df)
 
+    def cross_val_score(self):
+        """
+        Cross validation score for the model.
+
+        Evaluate the log score by stepping through each date in the dataset and computing the log score for this date
+        when the model is trained using data from prior to this date. The sum of the log score for all dates is
+        returned. Note that this will be slow, because it requires fitting the model many times.
+
+        :return: the cross validation log score
+        """
+        dates = self.pandas_data["date"].sort_values().unique()
+
+        # find the first date where we have seen all of the teams
+        seen_all_teams = False
+        i = 0
+        min_date = dates[0]
+        while not seen_all_teams:
+            df_sub = self.pandas_data[self.pandas_data["date"] <= min_date]
+            if set(list(df_sub["home_team"]) + list(df_sub["away_team"])) == set(
+                self.team_indices.keys()
+            ):
+                seen_all_teams = True
+            else:
+                i += 1
+                min_date = dates[i]
+
+        # iterate through each unique game day and store the log score
+        cv_score = 0
+        fit_dates = dates[dates >= min_date]
+        for i, date in tqdm.tqdm(enumerate(fit_dates[:-1]), total=len(fit_dates[:-1])):
+            self.fit(max_date=fit_dates[i])
+            cv_score += self._log_score(
+                self.pandas_data[self.pandas_data["date"] == fit_dates[i + 1]]
+            )
+
+        return cv_score / len(fit_dates[:-1])

@@ -93,8 +93,8 @@ class TestBPLModel(TestCase):
 
     def test_modelnotfit(self):
         """Test that the ModelNotFit error is thrown where is should be."""
-        class DummyModel:
 
+        class DummyModel:
             def __init__(self, is_fit):
                 self._is_fit = is_fit
 
@@ -144,46 +144,37 @@ class TestBPLModel(TestCase):
 
     def test_predict_future_matches(self):
         """Test predict future matches"""
-        df = pd.DataFrame({
-            "home_team": ["Arsenal", "Man City", "Tottenham"],
-            "away_team": ["Man City", "Tottenham", "Arsenal"]
-        })
+        df = pd.DataFrame(
+            {
+                "home_team": ["Arsenal", "Man City", "Tottenham"],
+                "away_team": ["Man City", "Tottenham", "Arsenal"],
+            }
+        )
         df_pred = FITTED_MODEL.predict_future_matches(df)
         # check returned dataframe has correct columns
         self.assertSetEqual(
             set(df_pred.columns),
-            {"home_team",
-             "away_team",
-             "pr_home",
-             "pr_away",
-             "pr_draw"}
+            {"home_team", "away_team", "pr_home", "pr_away", "pr_draw"},
         )
         # check probabilities sum to 1 across the columns
         self.assertTrue(
             np.allclose(
                 df_pred["pr_home"] + df_pred["pr_away"] + df_pred["pr_draw"],
-                [1.0, ] * len(df)
+                [1.0] * len(df),
             )
         )
 
     def test_log_score(self):
         """Test log score calculation"""
-        self.assertTrue(
-            FITTED_MODEL.log_score() < 0.0
-        )
-        self.assertTrue(
-            FITTED_MODEL.log_score(date_range=("2018-01-01", "2018-03-01"))
-        )
+        self.assertTrue(FITTED_MODEL.log_score() < 0.0)
+        self.assertTrue(FITTED_MODEL.log_score(date_range=("2018-01-01", "2018-03-01")))
         df_mock = pd.DataFrame(
             {
                 "date": ["2018-01-02"],
                 "home_team": ["Man City"],
                 "away_team": ["Arsenal"],
                 "home_goals": [4.0],
-                "away_goals": [1.0]
+                "away_goals": [1.0],
             }
         )
-        self.assertTrue(
-            FITTED_MODEL.log_score(df_mock)
-        )
-
+        self.assertTrue(FITTED_MODEL.log_score(df_mock))

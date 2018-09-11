@@ -17,6 +17,7 @@ def check_fit(foo):
 
     If a model is not fit, then throw a ModelNotFitError instead of running body.
     """
+
     @functools.wraps(foo)
     def foo_check(self, *args, **kwargs):
         if not self._is_fit:
@@ -25,7 +26,9 @@ def check_fit(foo):
             )
         else:
             return foo(self, *args, **kwargs)
+
     return foo_check
+
 
 class suppress_output:
     """ Suppress stdout and stderr from stan. """
