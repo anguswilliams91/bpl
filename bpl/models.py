@@ -410,7 +410,6 @@ class BPLModel:
                     * (X - stan_X[:, None, :].mean(axis=0))
                     / stan_X[:, None, :].std(axis=0)
                 )
-                print(X)
             mu_a = np.dot(self.beta_a, X.ravel())
             mu_b = self.beta_b_0 + np.dot(self.beta_b, X.ravel())
         else:
