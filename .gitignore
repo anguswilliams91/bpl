@@ -1,5 +1,8 @@
 # compiled stan models
-src/bpl/stan_model/*
+bpl/stan_model/*
+
+# ds store
+*.DS_Store
 
 # pycharm stuff
 .idea/
