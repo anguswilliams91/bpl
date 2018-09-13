@@ -6,7 +6,12 @@ import os
 from unittest import TestCase
 
 from bpl.models import BPLModel
-from bpl.util import ModelNotConvergedWarning, ModelNotFitError, check_fit
+from bpl.util import (
+    ModelNotConvergedWarning,
+    ModelNotFitError,
+    UnseenTeamError,
+    check_fit,
+)
 
 TEST_DATA = pd.read_csv(os.path.join(os.path.dirname(__file__), "test_data.csv"))
 TEST_FEATS = pd.read_csv(os.path.join(os.path.dirname(__file__), "test_feats.csv"))
@@ -178,3 +183,41 @@ class TestBPLModel(TestCase):
             }
         )
         self.assertTrue(FITTED_MODEL.log_score(df_mock))
+
+    def test_add_new_team(self):
+        """Test functionality for adding new teams"""
+        model = BPLModel(data=TEST_DATA)
+        model_X = BPLModel(data=TEST_DATA, X=TEST_FEATS)
+        model.fit(iter=100)
+        model_X.fit(iter=100)
+
+        # check correct exception raised if unseen team is passed
+        self.assertRaises(
+            UnseenTeamError, model.overall_probabilities, "blah", "Man City"
+        )
+        self.assertRaises(
+            UnseenTeamError, model.overall_probabilities, "Man City", "blah"
+        )
+        self.assertRaises(
+            UnseenTeamError, model.overall_probabilities, "blah1", "blah2"
+        )
+
+        # add a new team and check shapes
+        model.add_new_team("blah1")
+        self.assertIn("blah1", model.team_indices.keys())
+        self.assertEqual(model.a.shape[1], 21)
+        self.assertEqual(model.b.shape[1], 21)
+
+        # two new teams added with no extra prior information should be identical
+        model.add_new_team("blah2")
+        self.assertTupleEqual(
+            model.overall_probabilities("blah1", "blah2"),
+            model.overall_probabilities("blah2", "blah1"),
+        )
+
+        # if team already known is added, exception should be raised
+        self.assertRaises(ValueError, model.add_new_team, "Man City")
+
+        # test adding a new team to model with / without covariates
+        model_X.add_new_team("blah1")
+        model_X.add_new_team("blah2", X=np.array([70.0, 70.0, 70.0]))
