@@ -8,7 +8,12 @@ from scipy.stats import poisson
 
 from bpl.plotting import plot_score_grid, has_matplotlib
 from bpl.stan_models import simple_stan_model, prior_stan_model
-from bpl.util import ModelNotConvergedWarning, suppress_output, check_fit
+from bpl.util import (
+    ModelNotConvergedWarning,
+    UnseenTeamError,
+    suppress_output,
+    check_fit,
+)
 
 
 class BPLModel:
@@ -36,6 +41,9 @@ class BPLModel:
         self.beta_a = None
         self.beta_b = None
         self.beta_b_0 = None
+        self.sigma_a = None
+        self.sigma_b = None
+        self.mu_b = None
 
     def _pre_process_data(self, max_date=None):
         """Preprocess the data for stan."""
@@ -85,15 +93,20 @@ class BPLModel:
             sampling is also returned.
         """
         stan_data = self._pre_process_data(max_date)
+        self.stan_data = stan_data
         with suppress_output():
             fit = self.model.sampling(data=stan_data, **stan_kwargs)
         self.a = fit["a"]
         self.b = fit["b"]
         self.gamma = fit["gamma"]
+        self.sigma_a = fit["sigma_a"]
+        self.sigma_b = fit["sigma_b"]
         if self.X is not None:
             self.beta_a = fit["beta_a"]
             self.beta_b = fit["beta_b"]
             self.beta_b_0 = fit["beta_b_0"]
+        else:
+            self.mu_b = fit["mu_b"]
         self._is_fit = True
 
         s = fit.summary()
@@ -111,6 +124,25 @@ class BPLModel:
         else:
             return
 
+    def _check_teams_present(self, team_1, team_2):
+        # check if two teams are known to the model
+        def _make_error_msg(x):
+            return "Cannot find team(s) {}. Use the add_new_team method and try again.".format(
+                x
+            )
+
+        expr_1 = team_1 not in self.team_indices.keys()
+        expr_2 = team_2 not in self.team_indices.keys()
+        if expr_1 and expr_2:
+            msg = team_1 + " and " + team_2
+            raise UnseenTeamError(_make_error_msg(msg))
+        elif expr_1:
+            raise UnseenTeamError(_make_error_msg(team_1))
+        elif expr_2:
+            raise UnseenTeamError(_make_error_msg(team_2))
+        else:
+            pass
+
     @check_fit
     def simulate_match(self, home_team, away_team):
         """
@@ -124,6 +156,7 @@ class BPLModel:
         :return: a pandas dataframe containing columns home_team and away_team, which are the results of
             the simulations.
         """
+        self._check_teams_present(home_team, away_team)
         home_ind = self.team_indices[home_team] - 1
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
@@ -149,6 +182,7 @@ class BPLModel:
         :param away_goals: number of away goals.
         :return: the probability of this result.
         """
+        self._check_teams_present(home_team, away_team)
         home_ind = self.team_indices[home_team] - 1
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
@@ -173,6 +207,7 @@ class BPLModel:
         :param home: (optional) if True, then it is assumed that the team are
             playing at home.
         """
+        self._check_teams_present(team, opponent)
         team_ind = self.team_indices[team] - 1
         oppo_ind = self.team_indices[opponent] - 1
         b_team, a_oppo = self.b[:, team_ind], self.a[:, oppo_ind]
@@ -196,6 +231,7 @@ class BPLModel:
         :param home: (optional) if True, then it is assumed that the team are
             playing at home.
         """
+        self._check_teams_present(team, opponent)
         team_ind = self.team_indices[team] - 1
         oppo_ind = self.team_indices[opponent] - 1
         a_team, b_oppo = self.a[:, team_ind], self.b[:, oppo_ind]
@@ -337,3 +373,55 @@ class BPLModel:
             )
 
         return cv_score / len(fit_dates[:-1])
+
+    def add_new_team(self, team_name, X=None, seed=42):
+        """Add an unseen team to the model by sampling from the prior.
+
+        Add a new team to the model without explicitly possessing data for the team. This is done by sampling
+        from the prior for the abilities a and b (integrating over the hyper-parameters). If the model has been
+        fitted using extra covariates for the teams, these can optionally be provided to produce better forecasts.
+
+        :param team_name: the name of the team to add.
+        :param X: (optional) the team-level covariates for the new team.
+        :param seed: (optional) the random seed to use when generating the samples from the prior.
+        """
+        if team_name in self.team_indices.keys():
+            raise ValueError("Team {} already known to model.".format(team_name))
+
+        np.random.seed(seed)
+        if self.beta_a is not None:
+            if X is None:
+                warnings.warn(
+                    "You haven't provided features for {}."
+                    " Assuming X is the average of known teams."
+                    " For better forecasts, provide X.".format(team_name)
+                )
+                X = np.zeros(self.stan_data["nfeat"])
+            else:
+                stan_X = (
+                    self.X.replace(to_replace={"team": self.team_indices})
+                    .sort_values("team")
+                    .drop("team", axis=1)
+                    .astype(float)
+                    .values
+                )
+                X = (
+                    0.5
+                    * (X - stan_X[:, None, :].mean(axis=0))
+                    / stan_X[:, None, :].std(axis=0)
+                )
+            mu_a = np.dot(self.beta_a, X.ravel())
+            mu_b = self.beta_b_0 + np.dot(self.beta_b, X.ravel())
+        else:
+            mu_a = 0.0
+            mu_b = self.mu_b
+
+        log_a_tilde = np.random.normal(loc=0.0, scale=1.0, size=len(self.sigma_a))
+        log_b_tilde = np.random.normal(loc=0.0, scale=1.0, size=len(self.sigma_a))
+        a = np.exp(mu_a + log_a_tilde * self.sigma_a)
+        b = np.exp(mu_b + log_b_tilde * self.sigma_b)
+
+        new_index = max(self.team_indices.values()) + 1
+        self.team_indices[team_name] = new_index
+        self.a = np.concatenate((self.a, a[:, None]), axis=1)
+        self.b = np.concatenate((self.b, b[:, None]), axis=1)

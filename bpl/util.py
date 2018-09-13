@@ -12,6 +12,11 @@ class ModelNotConvergedWarning(Warning):
     pass
 
 
+class UnseenTeamError(Exception):
+
+    pass
+
+
 def check_fit(foo):
     """Decorator: check if a model is fit before running function body.
 
