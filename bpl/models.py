@@ -28,12 +28,15 @@ class BPLModel:
             columns correspond to the features (which currently must be numerical).
         """
         self.model = prior_stan_model if X is not None else simple_stan_model
-        self.X = X
         self.pandas_data = data
         self.stan_data = None
+        teams = list(set(data["home_team"]).union(set(data["away_team"])))
         self.team_indices = {
-            team: i + 1 for i, team in enumerate(np.sort(data["home_team"].unique()))
+            team: i + 1 for i, team in enumerate(teams)
         }
+        if X is not None:
+            X = X[X["team"].isin(teams)]
+        self.X = X
         self._is_fit = False
         self.a = None
         self.b = None
