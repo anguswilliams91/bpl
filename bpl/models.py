@@ -36,6 +36,14 @@ class BPLModel:
         }
         if X is not None:
             X = X[X["team"].isin(teams)]
+            if any(~pd.Series(teams).isin(X["team"])):
+                missing_teams = pd.Series(teams)[~pd.Series(teams).isin(X["team"])]
+                print(" ".join(missing_teams))
+                raise ValueError(
+                    "Teams in X must match teams in data. Teams missing from X: {}".format(
+                        " ".join(missing_teams.values)
+                    )
+                )
         self.X = X
         self._is_fit = False
         self.a = None
