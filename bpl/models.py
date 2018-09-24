@@ -302,7 +302,7 @@ class BPLModel:
         df["pr_draw"] = [p[2] for p in probs]
         return df
 
-    def plot_score_probabilies(self, home_team, away_team):
+    def plot_score_probabilities(self, home_team, away_team):
         """
         Visualise the probability of different scorelines.
 
