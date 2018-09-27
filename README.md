@@ -5,10 +5,10 @@
 `bpl` is a python 3 library for fitting Bayesian versions of the Dixon \& Coles (1997) model to data.
 It uses the `stan` library to fit models to data.  
 
-## Installation  
+ ## Installation
 
 You will need a working C++ compiler.
-If you are using anaconda, you can install gcc with 
+If you are using anaconda, you can install gcc with  
 
 ```bash
 conda install gcc
