@@ -5,6 +5,8 @@ python:
 install:
   - pip install --upgrade pip
   - pip install -U -r requirements.txt
+  - pip install pytest pytest-cov
 
 script:
-  python setup.py develop test
+  python setup.py develop && pytest --cov; codecov
+

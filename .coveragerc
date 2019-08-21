@@ -1,0 +1,3 @@
+[run]
+omit = bpl/setup.py
+       bpl/test/*
