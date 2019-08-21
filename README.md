@@ -18,7 +18,7 @@ conda install gcc
 You can then install with `pip`:
 
 ```bash
-pip install bpl
+pip install https://github.com/anguswilliams91/bpl/archive/master.zip
 ```
 
 ## Usage
