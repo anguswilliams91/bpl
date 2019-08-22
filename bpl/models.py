@@ -31,9 +31,7 @@ class BPLModel:
         self.pandas_data = data
         self.stan_data = None
         teams = list(set(data["home_team"]).union(set(data["away_team"])))
-        self.team_indices = {
-            team: i + 1 for i, team in enumerate(teams)
-        }
+        self.team_indices = {team: i + 1 for i, team in enumerate(teams)}
         if X is not None:
             X = X[X["team"].isin(teams)]
             if any(~pd.Series(teams).isin(X["team"])):
@@ -112,6 +110,7 @@ class BPLModel:
         self.gamma = fit["gamma"]
         self.sigma_a = fit["sigma_a"]
         self.sigma_b = fit["sigma_b"]
+        self.rho = fit["rho"]
         if self.X is not None:
             self.beta_a = fit["beta_a"]
             self.beta_b = fit["beta_b"]
@@ -428,7 +427,9 @@ class BPLModel:
             mu_b = self.mu_b
 
         log_a_tilde = np.random.normal(loc=0.0, scale=1.0, size=len(self.sigma_a))
-        log_b_tilde = np.random.normal(loc=0.0, scale=1.0, size=len(self.sigma_a))
+        log_b_tilde = np.random.normal(
+            loc=self.rho * log_a_tilde, scale=np.sqrt(1 - self.rho ** 2.0)
+        )
         a = np.exp(mu_a + log_a_tilde * self.sigma_a)
         b = np.exp(mu_b + log_b_tilde * self.sigma_b)
 

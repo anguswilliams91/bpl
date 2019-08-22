@@ -13,20 +13,23 @@ parameters {
     real<lower=0> sigma_a;
     real<lower=0> sigma_b;
     real mu_b;
+    real<lower=0, upper=1> u;
 }
 transformed parameters {
+    real<lower=-1, upper=1> rho = 2 * u - 1;
     vector[nteam] a = exp(sigma_a * log_a_tilde);
     vector[nteam] b = exp(mu_b + sigma_b * log_b_tilde);
-    vector[nmatch] home_rate = a[home_team] .* b[away_team] * gamma;
-    vector[nmatch] away_rate = a[away_team] .* b[home_team];
 }
 model {
+    vector[nmatch] home_rate = a[home_team] .* b[away_team] * gamma;
+    vector[nmatch] away_rate = a[away_team] .* b[home_team];
+    u ~ beta(2, 2);
     gamma ~ lognormal(0, 1);
     sigma_a ~ normal(0, 1);
     sigma_b ~ normal(0, 1);
     mu_b ~ normal(0, 1);
     log_a_tilde ~ normal(0, 1);
-    log_b_tilde ~ normal(0, 1);
+    log_b_tilde ~ normal(rho * log_a_tilde, sqrt(1 - square(rho)));
     home_goals ~ poisson(home_rate);
     away_goals ~ poisson(away_rate);
 }
