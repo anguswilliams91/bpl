@@ -111,6 +111,7 @@ class BPLModel:
         self.sigma_a = fit["sigma_a"]
         self.sigma_b = fit["sigma_b"]
         self.rho = fit["rho"]
+        self.tau = fit["tau"]
         if self.X is not None:
             self.beta_a = fit["beta_a"]
             self.beta_b = fit["beta_b"]
@@ -178,6 +179,20 @@ class BPLModel:
         df = pd.DataFrame({home_team: home_goals, away_team: away_goals})
         return df
 
+    @staticmethod
+    def _correlation_term(home_goals, away_goals, home_rate, away_rate, tau):
+        # correlation term from Dixon & Coles
+        if (home_goals == 0) and (away_goals == 0):
+            return 1.0 - tau * home_rate * away_rate
+        elif (home_goals == 1) and (away_goals == 0):
+            return 1.0 + tau * away_rate
+        elif (home_goals == 0) and (away_goals == 1):
+            return 1.0 + tau * home_rate
+        elif (home_goals == 1) and (away_goals == 1):
+            return 1.0 - tau
+        else:
+            return 1.0
+
     @check_fit
     def score_probability(self, home_team, away_team, home_goals, away_goals):
         """
@@ -199,9 +214,10 @@ class BPLModel:
         a_away, b_away = self.a[:, away_ind], self.b[:, away_ind]
         home_rate = a_home * b_away * self.gamma
         away_rate = a_away * b_home
+        corr = self._correlation_term(home_goals, away_goals, home_rate, away_rate, self.tau)
         home_probs = poisson.pmf(home_goals, home_rate)
         away_probs = poisson.pmf(away_goals, away_rate)
-        return np.mean(home_probs * away_probs)
+        return np.mean(corr * home_probs * away_probs)
 
     @check_fit
     def concede_n_probability(self, n, team, opponent, home=True):
