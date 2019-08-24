@@ -7,6 +7,12 @@ data {
     int away_team[nmatch];
     int home_goals[nmatch];
     int away_goals[nmatch];
+
+    // prior parameters for tau and rho
+    real rho_prior_mean;
+    real<lower=0> rho_prior_sigma;
+    real<lower=0> tau_prior_alpha;
+    real<lower=0> tau_prior_beta;
 }
 parameters {
     vector[nteam] log_a_tilde;
@@ -26,8 +32,8 @@ transformed parameters {
 model {
     vector[nmatch] home_rate = a[home_team] .* b[away_team] * gamma;
     vector[nmatch] away_rate = a[away_team] .* b[home_team];
-    tau ~ normal(0, 0.1);
-    u ~ beta(2, 2);
+    tau ~ normal(rho_prior_mean, rho_prior_sigma);
+    u ~ beta(tau_prior_alpha, tau_prior_beta);
     gamma ~ lognormal(0, 1);
     sigma_a ~ normal(0, 1);
     sigma_b ~ normal(0, 1);

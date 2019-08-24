@@ -13,13 +13,13 @@ functions {
                     accum += log(1.0 - tau * home_rate[i] * away_rate[i]);
                 else if ((home_goals[i] == 1) && (away_goals[i] == 0))
                     accum += log(1.0 + tau * away_rate[i]);
-                else if ((home_goals[i] == 0) && (away_goals[i] == 0))
+                else if ((home_goals[i] == 0) && (away_goals[i] == 1))
                     accum += log(1.0 + tau * home_rate[i]);
                 else if ((home_goals[i] == 1) && (away_goals[i] == 1))
-                    accum += 1.0 - tau;
+                    accum += log(1.0 - tau);
                 else
                     continue;
-                return accum;
             }
+            return accum;
         } 
 }
