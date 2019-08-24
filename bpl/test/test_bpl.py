@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 import os
 
@@ -70,7 +71,7 @@ class TestBPLModel(TestCase):
             np.allclose(stan_data["X"].mean(axis=0), np.zeros(stan_data["X"].shape[1]))
         )
 
-    def test_preprocess_data_scaling_mean(self):
+    def test_preprocess_data_scaling_std(self):
         """Test that the input features have been correctly scaled to 0.5 standard deviation."""
         model = BPLModel(TEST_DATA, X=TEST_FEATS)
         stan_data = model._pre_process_data()
@@ -115,9 +116,9 @@ class TestBPLModel(TestCase):
         self.assertTrue(dummy_fit.foo())
 
     def test_simulate_match(self):
-        df = FITTED_MODEL.simulate_match("Arsenal", "Man City")
+        df = FITTED_MODEL.simulate_match("Arsenal", "Man City", n=100)
         self.assertTrue(set(df.columns) == {"Arsenal", "Man City"})
-        self.assertTrue(len(df) == FITTED_MODEL.a.shape[0])
+        self.assertTrue(len(df) == 100)
         self.assertEqual(df["Arsenal"].isnull().sum(), 0.0)
         self.assertEqual(df["Man City"].isnull().sum(), 0.0)
 

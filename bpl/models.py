@@ -31,9 +31,7 @@ class BPLModel:
         self.pandas_data = data
         self.stan_data = None
         teams = list(set(data["home_team"]).union(set(data["away_team"])))
-        self.team_indices = {
-            team: i + 1 for i, team in enumerate(teams)
-        }
+        self.team_indices = {team: i + 1 for i, team in enumerate(teams)}
         if X is not None:
             X = X[X["team"].isin(teams)]
             if any(~pd.Series(teams).isin(X["team"])):
@@ -90,7 +88,18 @@ class BPLModel:
             stan_data["nfeat"] = stan_X.shape[1]
         return stan_data
 
-    def fit(self, max_date=None, return_summary=False, **stan_kwargs):
+    def fit(
+        self,
+        max_date=None,
+        return_summary=False,
+        prior_params={
+            "tau_prior_alpha": 2,
+            "tau_prior_beta": 4,
+            "rho_prior_mean": -0.1,
+            "rho_prior_sigma": 0.1,
+        },
+        **stan_kwargs,
+    ):
         """
         Fit the model.
 
@@ -99,12 +108,14 @@ class BPLModel:
 
         :param max_date: fit the model to games that took place on or before this date.
         :param return_summary: if True, return a pandas dataframe with summary statistics from the MCMC sampling.
+        :param prior_params: A dictionary containing the prior parameters for rho and tau in the model.
         :param stan_kwargs: extra keyword arguments that are passed to the StanModel (e.g., niter).
         :return: a stan fit object. If `return_summary` is True, then a pandas dataframe containing a summary of the
             sampling is also returned.
         """
         stan_data = self._pre_process_data(max_date)
         self.stan_data = stan_data
+        stan_data = dict(stan_data, **prior_params)
         with suppress_output():
             fit = self.model.sampling(data=stan_data, **stan_kwargs)
         self.a = fit["a"]
@@ -112,6 +123,8 @@ class BPLModel:
         self.gamma = fit["gamma"]
         self.sigma_a = fit["sigma_a"]
         self.sigma_b = fit["sigma_b"]
+        self.rho = fit["rho"]
+        self.tau = fit["tau"]
         if self.X is not None:
             self.beta_a = fit["beta_a"]
             self.beta_b = fit["beta_b"]
@@ -154,8 +167,18 @@ class BPLModel:
         else:
             pass
 
+    def _calculate_rates(self, home_team, away_team):
+        self._check_teams_present(home_team, away_team)
+        home_ind = self.team_indices[home_team] - 1
+        away_ind = self.team_indices[away_team] - 1
+        a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
+        a_away, b_away = self.a[:, away_ind], self.b[:, away_ind]
+        home_rate = a_home * b_away * self.gamma
+        away_rate = a_away * b_home
+        return home_rate, away_rate
+
     @check_fit
-    def simulate_match(self, home_team, away_team):
+    def simulate_match(self, home_team, away_team, n=100, random_state=42):
         """
         Simulate a match.
 
@@ -164,20 +187,36 @@ class BPLModel:
 
         :param home_team: name of the home team.
         :param away_team: name of the away team.
+        :param n: the number of simulations to run.
         :return: a pandas dataframe containing columns home_team and away_team, which are the results of
             the simulations.
         """
-        self._check_teams_present(home_team, away_team)
-        home_ind = self.team_indices[home_team] - 1
-        away_ind = self.team_indices[away_team] - 1
-        a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
-        a_away, b_away = self.a[:, away_ind], self.b[:, away_ind]
-        home_rate = a_home * b_away * self.gamma
-        away_rate = a_away * b_home
-        home_goals = np.random.poisson(home_rate)
-        away_goals = np.random.poisson(away_rate)
+        prob, x, y = self._make_score_grid(home_team, away_team)
+        home_goals = []
+        away_goals = []
+        z = prob.ravel()
+
+        for _ in range(n):
+            rep_ind = np.random.choice(len(z), p=z)
+            home_goals.append(x.ravel()[rep_ind])
+            away_goals.append(y.ravel()[rep_ind])
+
         df = pd.DataFrame({home_team: home_goals, away_team: away_goals})
         return df
+
+    @staticmethod
+    def _correlation_term(home_goals, away_goals, home_rate, away_rate, tau):
+        # correlation term from Dixon & Coles
+        if (home_goals == 0) and (away_goals == 0):
+            return 1.0 - tau * home_rate * away_rate
+        elif (home_goals == 1) and (away_goals == 0):
+            return 1.0 + tau * away_rate
+        elif (home_goals == 0) and (away_goals == 1):
+            return 1.0 + tau * home_rate
+        elif (home_goals == 1) and (away_goals == 1):
+            return 1.0 - tau
+        else:
+            return 1.0
 
     @check_fit
     def score_probability(self, home_team, away_team, home_goals, away_goals):
@@ -193,16 +232,13 @@ class BPLModel:
         :param away_goals: number of away goals.
         :return: the probability of this result.
         """
-        self._check_teams_present(home_team, away_team)
-        home_ind = self.team_indices[home_team] - 1
-        away_ind = self.team_indices[away_team] - 1
-        a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
-        a_away, b_away = self.a[:, away_ind], self.b[:, away_ind]
-        home_rate = a_home * b_away * self.gamma
-        away_rate = a_away * b_home
+        home_rate, away_rate = self._calculate_rates(home_team, away_team)
+        corr = self._correlation_term(
+            home_goals, away_goals, home_rate, away_rate, self.tau
+        )
         home_probs = poisson.pmf(home_goals, home_rate)
         away_probs = poisson.pmf(away_goals, away_rate)
-        return np.mean(home_probs * away_probs)
+        return np.mean(corr * home_probs * away_probs)
 
     @check_fit
     def concede_n_probability(self, n, team, opponent, home=True):
@@ -218,15 +254,12 @@ class BPLModel:
         :param home: (optional) if True, then it is assumed that the team are
             playing at home.
         """
-        self._check_teams_present(team, opponent)
-        team_ind = self.team_indices[team] - 1
-        oppo_ind = self.team_indices[opponent] - 1
-        b_team, a_oppo = self.b[:, team_ind], self.a[:, oppo_ind]
-        score_rate = b_team * a_oppo
-        if not home:
-            score_rate *= self.gamma
-        goal_probs = poisson.pmf(n, score_rate)
-        return np.mean(goal_probs)
+        score_fn = (
+            (lambda x: self.score_probability(team, opponent, x, n))
+            if home
+            else (lambda x: self.score_probability(opponent, team, n, x))
+        )
+        return sum([score_fn(x) for x in range(15)])
 
     @check_fit
     def score_n_probability(self, n, team, opponent, home=True):
@@ -242,15 +275,12 @@ class BPLModel:
         :param home: (optional) if True, then it is assumed that the team are
             playing at home.
         """
-        self._check_teams_present(team, opponent)
-        team_ind = self.team_indices[team] - 1
-        oppo_ind = self.team_indices[opponent] - 1
-        a_team, b_oppo = self.a[:, team_ind], self.b[:, oppo_ind]
-        score_rate = a_team * b_oppo
-        if home:
-            score_rate *= self.gamma
-        goal_probs = poisson.pmf(n, score_rate)
-        return np.mean(goal_probs)
+        score_fn = (
+            (lambda x: self.score_probability(team, opponent, n, x))
+            if home
+            else (lambda x: self.score_probability(opponent, team, x, n))
+        )
+        return sum([score_fn(x) for x in range(15)])
 
     @check_fit
     def _make_score_grid(self, home_team, away_team, max_goals=15):
@@ -428,7 +458,9 @@ class BPLModel:
             mu_b = self.mu_b
 
         log_a_tilde = np.random.normal(loc=0.0, scale=1.0, size=len(self.sigma_a))
-        log_b_tilde = np.random.normal(loc=0.0, scale=1.0, size=len(self.sigma_a))
+        log_b_tilde = np.random.normal(
+            loc=self.rho * log_a_tilde, scale=np.sqrt(1 - self.rho ** 2.0)
+        )
         a = np.exp(mu_a + log_a_tilde * self.sigma_a)
         b = np.exp(mu_b + log_b_tilde * self.sigma_b)
 
