@@ -89,14 +89,14 @@ class BPLModel:
         return stan_data
 
     def fit(
-        self, 
+        self,
         max_date=None,
-        return_summary=False, 
+        return_summary=False,
         prior_params={
-            "tau_prior_alpha": 2, 
-            "tau_prior_beta": 4, 
-            "rho_prior_mean": -0.1, 
-            "rho_prior_sigma": 0.1
+            "tau_prior_alpha": 2,
+            "tau_prior_beta": 4,
+            "rho_prior_mean": -0.1,
+            "rho_prior_sigma": 0.1,
         },
         **stan_kwargs,
     ):
@@ -233,7 +233,9 @@ class BPLModel:
         :return: the probability of this result.
         """
         home_rate, away_rate = self._calculate_rates(home_team, away_team)
-        corr = self._correlation_term(home_goals, away_goals, home_rate, away_rate, self.tau)
+        corr = self._correlation_term(
+            home_goals, away_goals, home_rate, away_rate, self.tau
+        )
         home_probs = poisson.pmf(home_goals, home_rate)
         away_probs = poisson.pmf(away_goals, away_rate)
         return np.mean(corr * home_probs * away_probs)
@@ -254,8 +256,8 @@ class BPLModel:
         """
         score_fn = (
             (lambda x: self.score_probability(team, opponent, x, n))
-            if home else
-            (lambda x: self.score_probability(opponent, team, n, x))
+            if home
+            else (lambda x: self.score_probability(opponent, team, n, x))
         )
         return sum([score_fn(x) for x in range(15)])
 
@@ -275,8 +277,8 @@ class BPLModel:
         """
         score_fn = (
             (lambda x: self.score_probability(team, opponent, n, x))
-            if home else
-            (lambda x: self.score_probability(opponent, team, x, n))
+            if home
+            else (lambda x: self.score_probability(opponent, team, x, n))
         )
         return sum([score_fn(x) for x in range(15)])
 
