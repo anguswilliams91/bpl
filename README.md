@@ -18,8 +18,9 @@ conda install gcc
 You can then install with `pip`:
 
 ```bash
-pip install https://github.com/anguswilliams91/bpl/archive/master.zip
+pip install bpl
 ```
+This may take a little while, as two stan models are compiled as part of the build.
 
 ## Usage
 

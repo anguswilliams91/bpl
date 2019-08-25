@@ -53,7 +53,7 @@ def long_description():
 
 setup(
     name="bpl",
-    version="0.0.3",
+    version="0.0.4",
     description="Bayesian models for football leagues",
     url="https://github.com/anguswilliams91/bpl",
     download_url="https://github.com/anguswilliams91/bpl/archive/master.zip",
