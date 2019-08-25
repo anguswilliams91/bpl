@@ -69,4 +69,5 @@ setup(
     test_suite="nose.collector",
     tests_require=["nose"],
     long_description=long_description(),
+    long_description_content_type='text/markdown',
 )

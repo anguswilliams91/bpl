@@ -27,7 +27,6 @@ pip install https://github.com/anguswilliams91/bpl/archive/master.zip
 Data should be provided to the model as a `pandas` dataframe, with columns `home_team`, `away_team`, `home_goals` and `away_goals`.
 You can also optionally provide a set of numerical covariates for each team (e.g. their ratings on FIFA) and these will be used in the fit.
 Example usage:
-
 ```python
 import bpl
 import pandas as pd
