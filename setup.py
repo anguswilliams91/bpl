@@ -46,8 +46,8 @@ def compile_stan_models(target_dir, model_dir=MODEL_DIR):
 
 setup(
     name="bpl",
-    version="0.0.1",
-    description="Simple Bayesian models for football leagues",
+    version="0.0.2",
+    description="Bayesian models for football leagues",
     url="https://github.com/anguswilliams91/FPL",
     author="Angus Williams <anguswilliams91@gmail.com>",
     author_email="anguswilliams91@gmail.com",
