@@ -1,5 +1,6 @@
 import os.path
 import pickle
+from pathlib import Path
 
 from setuptools import setup
 from setuptools.command.build_py import build_py
@@ -44,11 +45,18 @@ def compile_stan_models(target_dir, model_dir=MODEL_DIR):
             pickle.dump(sm, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
+def long_description():
+    root = Path(__file__).resolve().parent
+    readme = root / "README.md"
+    return readme.read_text(encoding="utf-8")
+
+
 setup(
     name="bpl",
-    version="0.0.1",
-    description="Simple Bayesian models for football leagues",
-    url="https://github.com/anguswilliams91/FPL",
+    version="0.0.2",
+    description="Bayesian models for football leagues",
+    url="https://github.com/anguswilliams91/bpl",
+    download_url="https://github.com/anguswilliams91/bpl/archive/master.zip",
     author="Angus Williams <anguswilliams91@gmail.com>",
     author_email="anguswilliams91@gmail.com",
     license="GPL-3.0",
@@ -60,8 +68,5 @@ setup(
     cmdclass={"build_py": BPyCmd, "develop": DevCmd},
     test_suite="nose.collector",
     tests_require=["nose"],
-    long_description="""
-    A package for fitting Bayesian models to football leagues. Models are reminiscent of Dixon \& Coles
-    (1997) , but have been cast into a hierarchical Bayesian form, with the option of team-level covariates in the
-    prior.""",
+    long_description=long_description(),
 )

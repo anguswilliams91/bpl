@@ -1,0 +1,4 @@
+include stan/*.stan
+include LICENSE
+include requirements.txt
+include bpl/test/*.csv
