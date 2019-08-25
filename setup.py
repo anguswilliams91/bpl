@@ -49,7 +49,7 @@ setup(
     version="0.0.2",
     description="Bayesian models for football leagues",
     url="https://github.com/anguswilliams91/bpl",
-    download_url="https://github.com/anguswilliams91/bpl/archive/master.zip"
+    download_url="https://github.com/anguswilliams91/bpl/archive/master.zip",
     author="Angus Williams <anguswilliams91@gmail.com>",
     author_email="anguswilliams91@gmail.com",
     license="GPL-3.0",
