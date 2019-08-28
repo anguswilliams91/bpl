@@ -20,7 +20,7 @@ You can then install with `pip`:
 ```bash
 pip install bpl
 ```
-This may take a little while, as two stan models are compiled as part of the build.
+This may take a little while, as two stan models are compiled as part of the build. You may also see an error during installation whereby pip fails to build a wheel for `bpl` -- this isn't a problem and it will run `python setup.py install` instead, which should install the package fine.
 
 ## Usage
 
