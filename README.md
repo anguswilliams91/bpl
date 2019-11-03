@@ -76,5 +76,5 @@ The home advantage has a straightforward log-normal prior
 
 Finally, the hyper-priors are
 
-![equation](https://latex.codecogs.com/gif.latex?%5Cmu_b%2C%20%5Cbeta_a%2C%20%5Cbeta_b%20%5Csim%20%5Cmathcal%7BN%7D%280%2C%201%29%2C%20%5C%5C%20%5Csigma_a%2C%20%5Csigma_b%20%5Csim%20%5Cmathcal%7BN%7D%5E&plus;%280%2C%201%29%2C%20%5C%5C%20u%20%3D%20%28%5Crho%20&plus;%201%29%20/%202%20%5Csim%20%5Cmathrm%7BBeta%7D%282%2C%204%29.)
+![equation](https://latex.codecogs.com/gif.latex?%5Cbegin%7Balign%7D%20%5Cmu_b%2C%20%5Cbeta_a%2C%20%5Cbeta_b%20%26%5Csim%20%5Cmathcal%7BN%7D%280%2C%201%29%2C%20%5Cnonumber%20%5C%5C%20%5Csigma_a%2C%20%5Csigma_b%20%26%5Csim%20%5Cmathcal%7BN%7D%5E&plus;%280%2C%201%29%2C%20%5Cnonumber%20%5C%5C%20u%20%3D%20%28%5Crho%20&plus;%201%29%20/%202%20%26%5Csim%20%5Cmathrm%7BBeta%7D%282%2C%204%29.%20%5Cnonumber%20%5Cend%7Balign%7D)
 
