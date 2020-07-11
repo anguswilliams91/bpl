@@ -9,19 +9,9 @@ It uses the `stan` library to fit models to data.
 
  ## Installation
 
-You will need a working C++ compiler.
-If you are using anaconda, you can install gcc with  
-
-```bash
-conda install gcc
-``` 
-
-You can then install with `pip`:
-
 ```bash
 pip install bpl
 ```
-This may take a little while, as two stan models are compiled as part of the build. You may also see an error during installation whereby pip fails to build a wheel for `bpl` -- this isn't a problem. Installation will continue, and it will run `python setup.py install` instead, which should install the package fine.
 
 ## Usage
 
