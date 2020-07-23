@@ -37,7 +37,7 @@ def compile_stan_models(target_dir, model_dir=MODEL_DIR):
     """Pre-compile the stan models that are used by the module."""
     from pystan import StanModel
 
-    names = ["simple_model.stan", "model_with_prior.stan"]
+    names = ["without_covariates.stan", "with_covariates.stan"]
     targets = ["simple_model.pkl", "prior_model.pkl"]
     for (name, target) in zip(names, targets):
         sm = StanModel(file=os.path.join(model_dir, name))
