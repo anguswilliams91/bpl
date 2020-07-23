@@ -125,8 +125,8 @@ class BPLModel:
         stan_data = dict(stan_data, **prior_params)
         with suppress_output():
             fit = self.model.sampling(data=stan_data, **stan_kwargs)
-        self.a = np.exp(fit["a"])
-        self.b = np.exp(fit["b"])
+        self.a = np.exp(fit["log_a"])
+        self.b = np.exp(fit["log_b"])
         self.gamma = np.exp(fit["log_gamma"])
         self.sigma_a = fit["sigma_a"]
         self.sigma_b = fit["sigma_b"]
