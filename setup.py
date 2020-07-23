@@ -38,7 +38,7 @@ def compile_stan_models(target_dir, model_dir=MODEL_DIR):
     from pystan import StanModel
 
     names = ["without_covariates.stan", "with_covariates.stan"]
-    targets = ["simple_model.pkl", "prior_model.pkl"]
+    targets = ["without_covariates.pkl", "with_covariates.pkl"]
     for (name, target) in zip(names, targets):
         sm = StanModel(file=os.path.join(model_dir, name))
         with open(os.path.join(target_dir, target), "wb") as f:
