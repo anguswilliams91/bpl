@@ -37,8 +37,8 @@ transformed parameters {
     vector[nteam] log_gamma = mu_log_gamma + sigma_log_gamma * log_gamma_tilde;
 }
 model {
-    vector[nmatch] log_home_rate = log_a[home_team] + log_b[away_team] + log_gamma[home_team];
-    vector[nmatch] log_away_rate = log_a[away_team] + log_b[home_team];
+    vector[nmatch] home_rate = log_a[home_team] + log_b[away_team] + log_gamma[home_team];
+    vector[nmatch] away_rate = log_a[away_team] + log_b[home_team];
     tau ~ normal(rho_prior_mean, rho_prior_sigma);
     u ~ beta(tau_prior_alpha, tau_prior_beta);
     beta_a ~ std_normal();
