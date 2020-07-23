@@ -7,13 +7,20 @@ import warnings
 from scipy.stats import poisson
 
 from bpl.plotting import plot_score_grid, has_matplotlib
-from bpl.stan_models import simple_stan_model, prior_stan_model
+from bpl.stan_models import model_without_covariates, model_with_covariates
 from bpl.util import (
     ModelNotConvergedWarning,
     UnseenTeamError,
     suppress_output,
     check_fit,
 )
+
+DEFAULT_PRIOR_PARAMS = {
+    "tau_prior_alpha": 2,
+    "tau_prior_beta": 4,
+    "rho_prior_mean": -0.1,
+    "rho_prior_sigma": 0.1,
+}
 
 
 class BPLModel:
@@ -27,7 +34,7 @@ class BPLModel:
             There should be a column "team", where each team in the league should only appear once. The remaining
             columns correspond to the features (which currently must be numerical).
         """
-        self.model = prior_stan_model if X is not None else simple_stan_model
+        self.model = model_with_covariates if X is not None else model_without_covariates
         self.pandas_data = data
         self.stan_data = None
         teams = list(set(data["home_team"]).union(set(data["away_team"])))
@@ -53,6 +60,10 @@ class BPLModel:
         self.sigma_a = None
         self.sigma_b = None
         self.mu_b = None
+        self.rho = None
+        self.tau = None
+        self.sigma_gamma = None
+        self.mu_gamma = None
 
     def _pre_process_data(self, max_date=None):
         """Preprocess the data for stan."""
@@ -92,12 +103,7 @@ class BPLModel:
         self,
         max_date=None,
         return_summary=False,
-        prior_params={
-            "tau_prior_alpha": 2,
-            "tau_prior_beta": 4,
-            "rho_prior_mean": -0.1,
-            "rho_prior_sigma": 0.1,
-        },
+        prior_params=None,
         **stan_kwargs,
     ):
         """
@@ -115,14 +121,17 @@ class BPLModel:
         """
         stan_data = self._pre_process_data(max_date)
         self.stan_data = stan_data
+        prior_params = prior_params or DEFAULT_PRIOR_PARAMS
         stan_data = dict(stan_data, **prior_params)
         with suppress_output():
             fit = self.model.sampling(data=stan_data, **stan_kwargs)
-        self.a = fit["a"]
-        self.b = fit["b"]
-        self.gamma = fit["gamma"]
+        self.a = np.exp(fit["a"])
+        self.b = np.exp(fit["b"])
+        self.gamma = np.exp(fit["log_gamma"])
         self.sigma_a = fit["sigma_a"]
         self.sigma_b = fit["sigma_b"]
+        self.sigma_gamma = fit["sigma_log_gamma"]
+        self.mu_gamma = fit["mu_log_gamma"]
         self.rho = fit["rho"]
         self.tau = fit["tau"]
         if self.X is not None:
@@ -173,7 +182,8 @@ class BPLModel:
         away_ind = self.team_indices[away_team] - 1
         a_home, b_home = self.a[:, home_ind], self.b[:, home_ind]
         a_away, b_away = self.a[:, away_ind], self.b[:, away_ind]
-        home_rate = a_home * b_away * self.gamma
+        gamma = self.gamma[:, home_ind]
+        home_rate = a_home * b_away * gamma
         away_rate = a_away * b_home
         return home_rate, away_rate
 
@@ -461,6 +471,7 @@ class BPLModel:
         log_b_tilde = np.random.normal(
             loc=self.rho * log_a_tilde, scale=np.sqrt(1 - self.rho ** 2.0)
         )
+        gamma = np.exp(np.random.normal(loc=self.mu_gamma, scale=self.sigma_gamma))
         a = np.exp(mu_a + log_a_tilde * self.sigma_a)
         b = np.exp(mu_b + log_b_tilde * self.sigma_b)
 
@@ -468,3 +479,4 @@ class BPLModel:
         self.team_indices[team_name] = new_index
         self.a = np.concatenate((self.a, a[:, None]), axis=1)
         self.b = np.concatenate((self.b, b[:, None]), axis=1)
+        self.gamma = np.concatenate((self.gamma, gamma[:, None]), axis=1)

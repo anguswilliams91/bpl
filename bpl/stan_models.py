@@ -11,5 +11,5 @@ def load_stan_model(model_name):
         return pickle.load(f)
 
 
-simple_stan_model = load_stan_model("simple_model")
-prior_stan_model = load_stan_model("prior_model")
+model_without_covariates = load_stan_model("without_covariates")
+model_with_covariates = load_stan_model("with_covariates")
