@@ -48,7 +48,7 @@ model {
     sigma_b ~ std_normal();
     log_a_tilde ~ std_normal();
     log_b_tilde ~ normal(rho * log_a_tilde, sqrt(1 - square(rho)));
-    log_gamma_tilde ~ std_normal()
+    log_gamma_tilde ~ std_normal();
     home_goals ~ poisson_log(home_rate);
     away_goals ~ poisson_log(away_rate);
     target += correlation_term(home_goals, away_goals, exp(home_rate), exp(away_rate), tau);
