@@ -211,8 +211,7 @@ class BPLModel:
             home_goals.append(x.ravel()[rep_ind])
             away_goals.append(y.ravel()[rep_ind])
 
-        df = pd.DataFrame({home_team: home_goals, away_team: away_goals})
-        return df
+        return pd.DataFrame({home_team: home_goals, away_team: away_goals})
 
     @staticmethod
     def _correlation_term(home_goals, away_goals, home_rate, away_rate, tau):
@@ -269,7 +268,7 @@ class BPLModel:
             if home
             else (lambda x: self.score_probability(opponent, team, n, x))
         )
-        return sum([score_fn(x) for x in range(15)])
+        return sum(score_fn(x) for x in range(15))
 
     @check_fit
     def score_n_probability(self, n, team, opponent, home=True):
@@ -290,7 +289,7 @@ class BPLModel:
             if home
             else (lambda x: self.score_probability(opponent, team, x, n))
         )
-        return sum([score_fn(x) for x in range(15)])
+        return sum(score_fn(x) for x in range(15))
 
     @check_fit
     def _make_score_grid(self, home_team, away_team, max_goals=15):
