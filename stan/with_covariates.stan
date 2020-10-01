@@ -46,6 +46,8 @@ model {
     beta_b_0 ~ std_normal();
     sigma_a ~ std_normal();
     sigma_b ~ std_normal();
+    sigma_log_gamma ~ std_normal();
+    mu_log_gamma ~ std_normal();
     log_a_tilde ~ std_normal();
     log_b_tilde ~ normal(rho * log_a_tilde, sqrt(1 - square(rho)));
     log_gamma_tilde ~ std_normal();

@@ -39,6 +39,7 @@ model {
     u ~ beta(tau_prior_alpha, tau_prior_beta);
     sigma_a ~ std_normal();
     sigma_b ~ std_normal();
+    sigma_log_gamma ~ std_normal();
     mu_b ~ std_normal();
     mu_log_gamma ~ std_normal();
     log_a_tilde ~ std_normal();
