@@ -208,7 +208,7 @@ class TestBPLModel(TestCase):
         self.assertIn("blah1", model.team_indices.keys())
         self.assertEqual(model.a.shape[1], 21)
         self.assertEqual(model.b.shape[1], 21)
-        self.assertEqual(mode.gamma.shape[1], 21)
+        self.assertEqual(model.gamma.shape[1], 21)
 
         # two new teams added with no extra prior information should be identical
         model.add_new_team("blah2")
